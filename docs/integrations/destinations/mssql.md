@@ -1,4 +1,4 @@
-# MSSQL
+# MS SQL Server (MSSQL)
 
 ## Supported sync modes
 
@@ -10,7 +10,7 @@
 | [Incremental Sync - Append](https://docs.airbyte.com/platform/using-airbyte/core-concepts/sync-modes/incremental-append) | Yes |
 | [Incremental Sync - Append + Deduped](https://docs.airbyte.com/platform/using-airbyte/core-concepts/sync-modes/incremental-append-deduped) | Yes |
 
-## Output Schema
+## Output schema
 
 Each stream will be output into its own table in SQL Server. Each table will contain the following metadata columns:
 
@@ -21,24 +21,29 @@ Each stream will be output into its own table in SQL Server. Each table will con
 
 See [here](../../platform/understanding-airbyte/airbyte-metadata-fields) for more information about these fields.
 
-## Getting Started
+## Getting started
 
 ### Setup guide
 
-- MS SQL Server: `Azure SQL Database`, `SQL Server 2016` or greater
+- MS SQL Server: Azure SQL Database or SQL Server 2016 or later
 
-#### Network Access
+#### Network access
 
-Make sure your SQL Server database can be accessed by Airbyte. If your database is within a VPC, you may need to allow access from the IP you're using to expose Airbyte.
+Make sure your SQL Server database can be accessed by Airbyte. If your database is within a VPC, allow access from the IP address you're using to expose Airbyte.
 
-#### **Permissions**
+#### Permissions
 
-You need a user configured in SQL Server that can create tables and write rows. We highly recommend creating an Airbyte-specific user for this purpose.
-In order to allow for normalization, please grant ALTER permissions for the user configured.
+Create a dedicated Airbyte user with access to the target database. The user needs permission to create and update schemas, tables, and indexes in any schema Airbyte writes to. At minimum, grant the user:
 
-#### Target Database
+- `CREATE SCHEMA` permission on the database, unless you create all destination schemas before syncing.
+- `CREATE TABLE` permission on the database.
+- `ALTER`, `INSERT`, `SELECT`, `UPDATE`, and `DELETE` permissions on each destination schema.
 
-You will need to choose an existing database or create a new database that will be used to store synced data from Airbyte.
+If you use **Bulk** load type with SQL Server, the user also needs `ADMINISTER BULK OPERATIONS` or membership in the `bulkadmin` fixed server role to run `BULK INSERT` against the destination tables. For Azure SQL Database and Azure SQL Managed Instance, grant the user `INSERT` and `ADMINISTER DATABASE BULK OPERATIONS`.
+
+#### Target database
+
+Choose an existing database or create a new database to store synced data from Airbyte.
 
 ### Configuration
 
@@ -51,7 +56,7 @@ You'll need the following information to configure the MSSQL destination:
 - **Database Name**
   - The name of the MSSQL database.
 - **Default Schema**
-  - The default schema tables are written to if the source does not specify a namespace. The usual value for this field is "public".
+  - The default schema where Airbyte writes tables if the source does not specify a namespace. SQL Server uses `dbo` as the default schema for new database users, but Airbyte defaults this field to `public`. Use `dbo`, `public`, or another schema name that exists or that the Airbyte database user can create.
 - **Username**
   - The username which is used to access the database.
 - **Password**
@@ -65,67 +70,69 @@ You'll need the following information to configure the MSSQL destination:
     - **Encrypted \(verify certificate\)**: Use the server's SSL certificate, after standard certificate verification.
       - **Host Name In Certificate** \(optional\): When using certificate verification, this property can be set to specify an expected name for added security. If this value is present, and the server's certificate's host name does not match it, certificate verification will fail.
 - **Load Type**
-  - The data load type supports two modes:  Insert or Bulk
-    - **Insert**: Utilizes SQL `INSERT` statements to load data to the destination table.
-    - **Bulk**: Utilizes Azure Blob Storage and the `BULK INSERT` command to load data to the destination table.  If selected, additional configuration is required:
-      - **Azure Blob Storage Account Name** - The name of the [Azure Blob Storage account]( https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#storage-accounts).
+  - The data load type supports two modes: **Insert** and **Bulk**.
+    - **Insert**: Uses SQL `INSERT` statements to load data to the destination table.
+    - **Bulk**: Stages CSV files in Azure Blob Storage and uses SQL Server `BULK INSERT` to load data to the destination table. If selected, additional configuration is required:
+      - **Azure Blob Storage Account Name** - The name of the [Azure Blob Storage account](https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#storage-accounts).
       - **Azure Blob Storage Container Name** - The name of the [Azure Blob Storage container](https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#containers).
-      - **Shared Access Signature** - A [shared access signature (SAS)](https://learn.microsoft.com/azure/storage/common/storage-sas-overview) provides secure delegated access to resources.\
-      - **BULK Load Data Source** - Specifies the [external data source name configured in MSSQL](https://learn.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql), which references the Azure Blob container.
-      - **Pre-Load Value Validation** - When enabled, Airbyte will validate all values before loading them into the destination table. This provides stronger data integrity guarantees but may significantly impact performance.
+      - **Shared Access Signature** - A [shared access signature (SAS)](https://learn.microsoft.com/azure/storage/common/storage-sas-overview) that grants access to the container. Use either **Shared Access Signature** or **Azure Blob Storage account key**, not both.
+      - **Azure Blob Storage account key** - The Azure Blob Storage account key. Use either **Azure Blob Storage account key** or **Shared Access Signature**, not both.
+      - **BULK Load Data Source** - The [external data source name configured in SQL Server](https://learn.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql), which references the Azure Blob container.
+      - **Pre-Load Value Validation** - When enabled, Airbyte validates all values before loading them into the destination table. This provides stronger data integrity guarantees but may significantly impact performance.
 
-#### MSSQL with Azure Blob Storage (Bulk Upload) Setup Guide
+#### MSSQL with Azure Blob Storage (Bulk upload) setup guide
 
-This section describes how to set up and use the **Microsoft SQL Server (MSSQL) connector** with the **Azure Blob Storage Bulk Upload** feature. By staging data in an Azure Blob Storage container and using `BULK INSERT`, you can significantly improve ingestion speed and reduce network overhead for large or frequent data loads.
+This section describes how to set up the **Bulk** load type. Airbyte stages data and format files in an Azure Blob Storage container, then runs `BULK INSERT` to load those files into SQL Server.
 
-##### Why Use Azure Blob Storage Bulk Upload?
+##### Why use Azure Blob Storage bulk upload?
 
-When handling high data volumes or frequent syncs, row-by-row inserts into MSSQL can become slow and resource-intensive. By staging files in Azure Blob Storage first, you can:
-1. **Aggregate Data into Bulk Files**: Data is written to Blob Storage in batches, reducing overhead.
-2. **Perform Bulk Ingestion**: MSSQL uses `BULK INSERT` to directly load these files, typically resulting in faster performance compared to conventional row-by-row inserts.
+When handling high data volumes or frequent syncs, row-by-row inserts into MSSQL can become slow and resource-intensive. By staging files in Azure Blob Storage first, Airbyte can:
+
+1. **Aggregate data into bulk files**: Airbyte writes records to Blob Storage in batches, reducing row-by-row insert overhead.
+2. **Perform bulk ingestion**: SQL Server uses `BULK INSERT` to load these files directly.
 
 ##### Prerequisites
 
-1. **A Microsoft SQL Server Instance**
-    - Compatible with on-premises SQL Server or Azure SQL Database.
-2. **Azure Blob Storage Account**
-    - A storage account and container (e.g., `bulk-staging`) where data files will be placed.
+1. **A Microsoft SQL Server instance**
+   - Bulk load requires SQL Server 2017 or later, Azure SQL Database, or Azure SQL Managed Instance.
+2. **Azure Blob Storage account**
+   - A storage account and container, for example `bulk-staging`, where Airbyte stages data files and format files.
 3. **Permissions**
-    - **Blob Storage**: ability to create, read, and delete objects within the designated container.
-    - **MSSQL**: ability to create or modify tables, and permission to execute `BULK INSERT`.
+   - **Blob Storage**: Permission to create, read, and delete objects in the container.
+   - **MSSQL**: Permission to create or modify tables and indexes, and permission to run `BULK INSERT`. For SQL Server, this requires `ADMINISTER BULK OPERATIONS` or membership in the `bulkadmin` fixed server role. For Azure SQL Database and Azure SQL Managed Instance, this requires `INSERT` and `ADMINISTER DATABASE BULK OPERATIONS`.
 
-##### Setup Guide
+##### Setup guide
 
 Follow these steps to configure MSSQL with Azure Blob Storage for bulk uploads.
 
-###### 1. Set Up Azure Blob Storage
+###### 1. Set up Azure Blob Storage
 
-1. **Create a Storage Account & Container**
-    - In the Azure Portal, create (or reuse) a Storage Account.
-    - Within that account, create a container (e.g., `bulk-staging`) for staging your data files.
-2. **Establish Access Credentials**
-    - Use a **Shared Access Signature (SAS)** scoped to your container.
-    - Ensure the SAS token or role assignments include permissions such as **Read**, **Write**, **Delete**, and **List**.
+1. **Create a storage account and container**
+   - In the Azure Portal, create or reuse a storage account.
+   - Within that account, create a container, for example `bulk-staging`, for Airbyte staging files.
+2. **Establish access credentials**
+   - Use either an Azure Blob Storage account key or a **Shared Access Signature (SAS)** scoped to your container.
+   - If you use a SAS token, include **Read**, **Write**, **Delete**, and **List** permissions. Microsoft recommends that SAS tokens used by SQL Server database scoped credentials omit the leading `?`. Use the same token format in the Airbyte **Shared Access Signature** field.
 
 ###### 2. Configure MSSQL
 
-See the official [Microsoft documentation](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-external-data-source-transact-sql?view=sql-server-2017&tabs=dedicated#e-create-an-external-data-source-for-bulk-operations-retrieving-data-from-azure-storage) for more details. Below is a simplified overview:
+See the official [Microsoft documentation](https://learn.microsoft.com/en-us/sql/relational-databases/import-export/examples-of-bulk-access-to-data-in-azure-blob-storage?view=sql-server-ver16) for more details. Below is a simplified overview:
 
-1. **(Optional) Create a Master Encryption Key**
+1. **Create a master encryption key if required**
    If your environment requires a master key to store credentials securely, create one:
    ```sql
    CREATE MASTER KEY ENCRYPTION BY PASSWORD = '<your_password>';
    ```
 
-2. **Create a Database Scoped Credential**
-   Configure a credential that grants MSSQL access to your Blob Storage using the SAS token:
+2. **Create a database scoped credential**
+   Configure a credential that grants MSSQL access to your Blob Storage using the SAS token. Omit the leading `?` from the SAS token:
    ```sql
    CREATE DATABASE SCOPED CREDENTIAL <credential_name>
    WITH IDENTITY = 'SHARED ACCESS SIGNATURE',
-        SECRET = '<your_sas_token>';
+        SECRET = '<your_sas_token_without_leading_question_mark>';
    ```
 
-3. **Create an External Data Source**
+3. **Create an external data source**
    Point MSSQL to your Blob container using the credential:
    ```sql
    CREATE EXTERNAL DATA SOURCE <data_source_name>
@@ -135,22 +142,64 @@ See the official [Microsoft documentation](https://learn.microsoft.com/en-us/sql
        CREDENTIAL = <credential_name>
    );
    ```
-   You’ll reference `<data_source_name>` when configuring the connector.
+   Reference `<data_source_name>` in the connector's **BULK Load Data Source** field. Airbyte uploads files to paths inside the configured container, so the external data source should point to the same container used in the Airbyte configuration.
 
-###### 3. Connector Configuration
+###### 3. Connector configuration
 
-You’ll need to supply:
+Supply these values in Airbyte:
 
-1. **MSSQL Connection Details**
-    - The server hostname/IP, port, database name, and authentication (username/password).
+1. **MSSQL connection details**
+   - The server hostname or IP address, port, database name, username, and password.
 2. **Bulk Load Data Source**
-    - The name of the external data source you created (e.g., `<data_source_name>`).
-3. **Azure Storage Account & Container**
-    - The name of the storage account and container.
-4. **SAS Token**
-    - The token that grants Blob Storage access.
+   - The external data source you created, for example `<data_source_name>`.
+3. **Azure Storage Account and Container**
+   - The storage account and container Airbyte uses for staging.
+4. **Shared Access Signature** or **Azure Blob Storage account key**
+   - The credential Airbyte uses to upload and delete staged files.
 
-See the [Getting Started: Configuration section](#configuration) of this guide for more details on `BULK INSERT` connector configuration.
+See the [Configuration section](#configuration) of this guide for more details on `BULK INSERT` connector configuration.
+
+## Reference
+
+For programmatic configuration with the Airbyte API, PyAirbyte, or Terraform, use these parameter names:
+
+```json
+{
+  "host": "your-sql-server-host",
+  "port": 1433,
+  "database": "your_database",
+  "schema": "dbo",
+  "user": "airbyte_user",
+  "password": "your_password",
+  "jdbc_url_params": "encrypt=true",
+  "ssl_method": {
+    "name": "encrypted_trust_server_certificate"
+  },
+  "load_type": {
+    "load_type": "INSERT"
+  },
+  "tunnel_method": {
+    "tunnel_method": "NO_TUNNEL"
+  }
+}
+```
+
+For bulk loading, set `load_type.load_type` to `BULK` and include the Azure Blob Storage fields:
+
+```json
+{
+  "load_type": {
+    "load_type": "BULK",
+    "azure_blob_storage_account_name": "mystorageaccount",
+    "azure_blob_storage_container_name": "bulk-staging",
+    "shared_access_signature": "sv=...",
+    "bulk_load_data_source": "MyAzureBlobStorage",
+    "bulk_load_validate_values_pre_load": false
+  }
+}
+```
+
+Use `azure_blob_storage_account_key` instead of `shared_access_signature` if you authenticate to Azure Blob Storage with an account key.
 
 ## Namespace support
 
@@ -163,24 +212,24 @@ This destination supports [namespaces](https://docs.airbyte.com/platform/using-a
 
 | Version    | Date       | Pull Request                                               | Subject                                                                                             |
 |:-----------|:-----------|:-----------------------------------------------------------|:----------------------------------------------------------------------------------------------------|
-| 2.2.16 | 2026-04-23 | [76946](https://github.com/airbytehq/airbyte/pull/76946) | Upgrade Bulk CDK to 1.0.11 and fix `_ab_cdc_deleted_at` column type so the secondary index on CDC streams can be created. |
+| 2.2.16 | 2026-05-12 | [76946](https://github.com/airbytehq/airbyte/pull/76946) | Upgrade Bulk CDK to 1.0.11 and fix `_ab_cdc_deleted_at` column type so the secondary index on CDC streams can be created. |
 | 2.2.15 | 2026-01-26 | [72297](https://github.com/airbytehq/airbyte/pull/72297) | Upgrade CDK to 0.2.0 |
 | 2.2.14 | 2025-11-05 | [69130](https://github.com/airbytehq/airbyte/pull/69130) | Upgrade to Bulk CDK 0.1.61. |
 | 2.2.13     | 2025-09-24 | [66684](https://github.com/airbytehq/airbyte/pull/66684)   | Pin to CDK artifact                                                                                 |
 | 2.2.12     | 2025-06-26 | [62078](https://github.com/airbytehq/airbyte/pull/62078)   | Add SSH tunnel support                                                                              |
 | 2.2.11     | 2025-05-30 | [61017](https://github.com/airbytehq/airbyte/pull/61017)   | Integration test fixes                                                                              |
 | 2.2.10     | 2025-05-29 | [60897](https://github.com/airbytehq/airbyte/pull/60897)   | Internal fixes                                                                                      |
-| 2.2.9      | 2025-05-19 | [60791](https://github.com/airbytehq/airbyte/pull/60791)   | Fix bug in detecting schema change when stream has no columns                                       |
-| 2.2.8      | 2025-05-08 | [59735](https://github.com/airbytehq/airbyte/pull/59735)   | Cleanup: Remove unused code                                                                         |
-| 2.2.7      | 2025-05-07 | [56444](https://github.com/airbytehq/airbyte/pull/56444)   | CDK: Internal refactor; perf improvements                                                           |
-| 2.2.6      | 2025-04-21 | [58146](https://github.com/airbytehq/airbyte/pull/58146)   | Fix numeric bounds-handling                                                                         |
-| 2.2.5      | 2025-04-18 | [58140](https://github.com/airbytehq/airbyte/pull/58140)   | Upgrade to latest CDK                                                                               |
-| 2.2.4      | 2025-04-11 | [57563](https://github.com/airbytehq/airbyte/pull/57563)   | Improve BULK INSERT documentation.                                                                  |
-| 2.2.3      | 2025-04-16 | [58085](https://github.com/airbytehq/airbyte/pull/58085)   | Internal refactoring                                                                                |
-| 2.2.2      | 2025-04-07 | [56391](https://github.com/airbytehq/airbyte/pull/56391)   | Add support for Azure blob storage auth via storage account key.                                    |
+| 2.2.9      | 2025-05-21 | [60791](https://github.com/airbytehq/airbyte/pull/60791)   | Fix bug in detecting schema change when stream has no columns                                       |
+| 2.2.8      | 2025-05-21 | [59735](https://github.com/airbytehq/airbyte/pull/59735)   | Cleanup: Remove unused code                                                                         |
+| 2.2.7      | 2025-05-21 | [56444](https://github.com/airbytehq/airbyte/pull/56444)   | CDK: Internal refactor; perf improvements                                                           |
+| 2.2.6      | 2025-04-22 | [58146](https://github.com/airbytehq/airbyte/pull/58146)   | Fix numeric bounds-handling                                                                         |
+| 2.2.5      | 2025-04-19 | [58140](https://github.com/airbytehq/airbyte/pull/58140)   | Upgrade to latest CDK                                                                               |
+| 2.2.4      | 2025-04-17 | [57563](https://github.com/airbytehq/airbyte/pull/57563)   | Improve BULK INSERT documentation.                                                                  |
+| 2.2.3      | 2025-04-17 | [58085](https://github.com/airbytehq/airbyte/pull/58085)   | Internal refactoring                                                                                |
+| 2.2.2      | 2025-04-09 | [56391](https://github.com/airbytehq/airbyte/pull/56391)   | Add support for Azure blob storage auth via storage account key.                                    |
 | 2.2.1      | 2025-03-27 | [56402](https://github.com/airbytehq/airbyte/pull/56402)   | Improve Azure blob storage load logic.                                                              |
-| 2.2.0      | 2025-03-23 | [56353](https://github.com/airbytehq/airbyte/pull/56353)   | Bulk Load performance improvements                                                                  |
-| 2.1.2      | 2025-03-25 | [56346](https://github.com/airbytehq/airbyte/pull/56346)   | Internal refactor                                                                                   |
+| 2.2.0      | 2025-04-02 | [56353](https://github.com/airbytehq/airbyte/pull/56353)   | Bulk Load performance improvements                                                                  |
+| 2.1.2      | 2025-03-27 | [56346](https://github.com/airbytehq/airbyte/pull/56346)   | Internal refactor                                                                                   |
 | 2.1.1      | 2025-03-24 | [56355](https://github.com/airbytehq/airbyte/pull/56355)   | Upgrade to airbyte/java-connector-base:2.0.1 to be M4 compatible.                                   |
 | 2.1.0      | 2025-03-24 | [55849](https://github.com/airbytehq/airbyte/pull/55849)   | Misc. bugfixes in type-handling (esp. in complex types)                                             |
 | 2.0.5      | 2025-03-24 | [55904](https://github.com/airbytehq/airbyte/pull/55904)   | Fix handling of invalid schemas (correctly JSON-serialize values)                                   |
