@@ -19,7 +19,7 @@ Each stream will be output into its own table in SQL Server. Each table will con
 - `_airbyte_meta`: Additional information about the record. The column type in SQL Server is `TEXT`.
 - `_airbyte_generation_id`: Incremented each time a [refresh](https://docs.airbyte.com/operator-guides/refreshes) is executed.  The column type in SQL Server is `TEXT`.
 
-See [here](../../platform/understanding-airbyte/airbyte-metadata-fields) for more information about these fields.
+See [Airbyte metadata fields](../../platform/understanding-airbyte/airbyte-metadata-fields) for more information about these fields.
 
 ## Getting started
 
@@ -120,12 +120,14 @@ See the official [Microsoft documentation](https://learn.microsoft.com/en-us/sql
 
 1. **Create a master encryption key if required**
    If your environment requires a master key to store credentials securely, create one:
+
    ```sql
    CREATE MASTER KEY ENCRYPTION BY PASSWORD = '<your_password>';
    ```
 
 2. **Create a database scoped credential**
    Configure a credential that grants MSSQL access to your Blob Storage using the SAS token. Omit the leading `?` from the SAS token:
+
    ```sql
    CREATE DATABASE SCOPED CREDENTIAL <credential_name>
    WITH IDENTITY = 'SHARED ACCESS SIGNATURE',
@@ -134,6 +136,7 @@ See the official [Microsoft documentation](https://learn.microsoft.com/en-us/sql
 
 3. **Create an external data source**
    Point MSSQL to your Blob container using the credential:
+
    ```sql
    CREATE EXTERNAL DATA SOURCE <data_source_name>
    WITH (
@@ -142,6 +145,7 @@ See the official [Microsoft documentation](https://learn.microsoft.com/en-us/sql
        CREDENTIAL = <credential_name>
    );
    ```
+
    Reference `<data_source_name>` in the connector's **BULK Load Data Source** field. Airbyte uploads files to paths inside the configured container, so the external data source should point to the same container used in the Airbyte configuration.
 
 ###### 3. Connector configuration
@@ -212,9 +216,9 @@ This destination supports [namespaces](https://docs.airbyte.com/platform/using-a
 
 | Version    | Date       | Pull Request                                               | Subject                                                                                             |
 |:-----------|:-----------|:-----------------------------------------------------------|:----------------------------------------------------------------------------------------------------|
-| 2.2.16 | 2026-05-12 | [76946](https://github.com/airbytehq/airbyte/pull/76946) | Upgrade Bulk CDK to 1.0.11 and fix `_ab_cdc_deleted_at` column type so the secondary index on CDC streams can be created. |
-| 2.2.15 | 2026-01-26 | [72297](https://github.com/airbytehq/airbyte/pull/72297) | Upgrade CDK to 0.2.0 |
-| 2.2.14 | 2025-11-05 | [69130](https://github.com/airbytehq/airbyte/pull/69130) | Upgrade to Bulk CDK 0.1.61. |
+| 2.2.16     | 2026-05-12 | [76946](https://github.com/airbytehq/airbyte/pull/76946)   | Upgrade Bulk CDK to 1.0.11 and fix CDC index column type.                                           |
+| 2.2.15     | 2026-01-26 | [72297](https://github.com/airbytehq/airbyte/pull/72297)   | Upgrade CDK to 0.2.0                                                                                |
+| 2.2.14     | 2025-11-05 | [69130](https://github.com/airbytehq/airbyte/pull/69130)   | Upgrade to Bulk CDK 0.1.61.                                                                         |
 | 2.2.13     | 2025-09-24 | [66684](https://github.com/airbytehq/airbyte/pull/66684)   | Pin to CDK artifact                                                                                 |
 | 2.2.12     | 2025-06-26 | [62078](https://github.com/airbytehq/airbyte/pull/62078)   | Add SSH tunnel support                                                                              |
 | 2.2.11     | 2025-05-30 | [61017](https://github.com/airbytehq/airbyte/pull/61017)   | Integration test fixes                                                                              |
