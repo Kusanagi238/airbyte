@@ -75,7 +75,7 @@ The Microsoft Dataverse source connector supports the following [sync modes](/pl
 | :---------------------------- | :--------- | :-------------------------------------------------------------------- |
 | Full Refresh Sync             | Yes        |                                                                       |
 | Incremental Sync              | Yes        | Only for tables with Dataverse change tracking enabled                |
-| Change Data Capture \(CDC\)   | Yes        | Uses Dataverse change tracking. Deleted records include only their ID. |
+| Change Data Capture \(CDC\)   | Yes        | Uses Dataverse change tracking. Deleted records include only their ID |
 | Replicate Incremental Deletes | Yes        | Only for tables synced incrementally                                  |
 | SSL connection                | Yes        |                                                                       |
 | Namespaces                    | No         |                                                                       |
@@ -94,23 +94,23 @@ For `DateTime` columns, the connector also reads `DateTimeBehavior` from `DateTi
 
 ### Data type mapping
 
-| Dataverse type         | Airbyte type              | Notes                                                      |
-| :--------------------- | :------------------------ | :--------------------------------------------------------- |
-| `String`               | `string`                  |                                                            |
-| `UniqueIdentifier`     | `string`                  |                                                            |
+| Dataverse type          | Airbyte type              | Notes                                                      |
+| :---------------------- | :------------------------ | :--------------------------------------------------------- |
+| `String`                | `string`                  |                                                            |
+| `UniqueIdentifier`      | `string`                  |                                                            |
 | `DateTime` \(DateOnly\) | `date`                    | Applies when `DateTimeBehavior` is `DateOnly`              |
-| `DateTime` \(other\)   | `timestamp with timezone` | Applies to `UserLocal` and `TimeZoneIndependent` behaviors |
-| `Integer`              | `integer`                 |                                                            |
-| `BigInt`               | `integer`                 |                                                            |
-| `Money`                | `number`                  |                                                            |
-| `Boolean`              | `boolean`                 |                                                            |
-| `Double`               | `number`                  |                                                            |
-| `Decimal`              | `number`                  |                                                            |
-| `Status`               | `integer`                 |                                                            |
-| `State`                | `integer`                 |                                                            |
-| `Picklist`             | `integer`                 |                                                            |
-| `Lookup`               | `string`                  | Exposed as the lookup ID field                             |
-| `Virtual`              | Not synced                | Virtual columns are skipped                                |
+| `DateTime` \(other\)    | `timestamp with timezone` | Applies to `UserLocal` and `TimeZoneIndependent` behaviors |
+| `Integer`               | `integer`                 |                                                            |
+| `BigInt`                | `integer`                 |                                                            |
+| `Money`                 | `number`                  |                                                            |
+| `Boolean`               | `boolean`                 |                                                            |
+| `Double`                | `number`                  |                                                            |
+| `Decimal`               | `number`                  |                                                            |
+| `Status`                | `integer`                 |                                                            |
+| `State`                 | `integer`                 |                                                            |
+| `Picklist`              | `integer`                 |                                                            |
+| `Lookup`                | `string`                  | Exposed as the lookup ID field                             |
+| `Virtual`               | Not synced                | Virtual columns are skipped                                |
 
 Other Dataverse types are discovered as `string`.
 
@@ -137,8 +137,8 @@ This connector uses the Microsoft Dataverse Web API at `/api/data/v9.2`.
 <details>
   <summary>Expand to review</summary>
 
-| Version | Date       | Pull Request                                             | Subject                                                                                |
-| :------ | :--------- | :------------------------------------------------------- | :------------------------------------------------------------------------------------- |
+| Version | Date | Pull Request | Subject |
+| :------ | :--- | :----------- | :------ |
 | 1.0.0 | 2026-05-13 | [77565](https://github.com/airbytehq/airbyte/pull/77565) | Map DateOnly fields to `date` format instead of `date-time`. Add `$select` projection to discovery to reduce metadata payload size. Streams with DateOnly fields require a schema refresh and data reset. |
 | 0.1.32 | 2025-05-11 | [60052](https://github.com/airbytehq/airbyte/pull/60052) | Update dependencies |
 | 0.1.31 | 2025-05-03 | [59292](https://github.com/airbytehq/airbyte/pull/59292) | Update dependencies |
