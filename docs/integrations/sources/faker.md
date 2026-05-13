@@ -1,6 +1,6 @@
 # Sample Data (Faker)
 
-The Sample Data source generates realistic fake data using the Python [`mimesis`](https://mimesis.name/en/master/) library. It produces an e-commerce-like dataset useful for testing, demos, and development.
+The Sample Data source generates realistic fake data using the Python [`mimesis`](https://mimesis.name/en/master/) library. It produces an e-commerce-like dataset for testing, demos, and development.
 
 ## Prerequisites
 
@@ -35,10 +35,37 @@ Each purchase record includes: `id`, `user_id`, `product_id`, `created_at`, `upd
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | **Count** | integer | 1000 | The total number of user records to generate. The purchases stream scales proportionally. Does not affect the products stream beyond its 100-product catalog. |
-| **Seed** | integer | -1 | Controls random data generation. Set a specific value to produce the same records on each sync. Leave at `-1` for random data. |
+| **Seed** | integer | -1 | Controls random data generation. Set a specific value to reuse the same generated record content. Leave at `-1` for random data. |
 | **Always Updated** | boolean | true | When `true`, every sync emits all records with fresh `updated_at` timestamps. When `false`, the connector stops emitting records after the initial sync produces `count` records. |
 | **Records Per Stream Slice** | integer | 1000 | The number of records per stream slice before a state checkpoint is emitted. |
 | **Parallelism** | integer | 4 | The number of parallel workers for data generation. Set this to the number of CPUs allocated to the connector. |
+
+## Sync behavior
+
+This connector generates records locally and doesn't make API requests, so it doesn't require credentials, permissions, or network access. It doesn't have API rate limits.
+
+The generated user data uses Mimesis English-language providers. The products stream uses a fixed local catalog of 100 vehicle records.
+
+Full refresh syncs emit the generated records for each selected stream. Incremental sync behavior depends on **Always Updated**:
+
+- When **Always Updated** is `true`, each sync updates the `updated_at` cursor value and emits records again.
+- When **Always Updated** is `false`, the connector stores state after the first sync. Later incremental syncs emit no records unless you reset the stream state or change to full refresh.
+
+The **Seed** setting controls deterministic generated content, such as user identities, addresses, product relationships, and generated historical timestamps. It doesn't keep `updated_at` values fixed when **Always Updated** is `true`, because those values are generated at sync time.
+
+## Reference
+
+This connector doesn't use a remote API. It generates records in the connector process with Mimesis providers and a local product catalog.
+
+For programmatic configuration, use these parameter names:
+
+| Field | Required | Description |
+| ----- | :------: | ----------- |
+| `count` | No | Number of user records to generate. The purchases stream scales with this value. The products stream emits at most 100 records. Defaults to `1000`. |
+| `seed` | No | Random seed for generated data. Use a specific integer for repeatable generated content. Defaults to `-1`. |
+| `always_updated` | No | Whether every sync emits records with new `updated_at` values. Defaults to `true`. |
+| `records_per_slice` | No | Number of records per stream slice before the connector emits a state checkpoint. Defaults to `1000`. |
+| `parallelism` | No | Number of parallel workers to use for data generation. Defaults to `4`. |
 
 ## Changelog
 
