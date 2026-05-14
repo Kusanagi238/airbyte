@@ -219,6 +219,18 @@ This is a good solution if:
 - You are not replicating non-materialized views. Non-materialized views are not supported by xmin replication.
 </FieldAnchor>
 
+## Performance settings
+
+<FieldAnchor field="max_db_connections">
+
+### Max concurrent queries to database
+
+The **Max Concurrent Queries to Database** field controls the maximum number of concurrent queries the connector can run against Postgres during a sync. Leave this field empty to let Airbyte choose the concurrency automatically.
+
+Use a lower value if your Postgres server has limited connection capacity or if other applications need most available connection slots. Postgres enforces connection limits with the [`max_connections`](https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS) setting, and some connection slots might be reserved for superusers or roles with reserved connection privileges.
+
+</FieldAnchor>
+
 ## Connecting with SSL or SSH Tunneling
 
 ### SSL Modes
@@ -358,8 +370,8 @@ According to Postgres [documentation](https://www.postgresql.org/docs/14/datatyp
 | Version     | Date       | Pull Request                                             | Subject                                                                                                                                                                    |
 |-------------|------------|----------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 3.8.0-rc.11 | 2026-05-14 | [78102](https://github.com/airbytehq/airbyte/pull/78102) | Remove internal github links from error messages.                                                                                                                          |
-| 3.8.0-rc.10 | 2026-05-11 | [77706](https://github.com/airbytehq/airbyte/pull/77706) | Prevent table filenode query from running outside max db connections control.                                                                                              |
-| 3.8.0-rc.9  | 2026-05-05 | [77805](https://github.com/airbytehq/airbyte/pull/77805) | Make the hidden additional properties fields in spec optional. No functional change.                                                                                       |
+| 3.8.0-rc.10 | 2026-05-12 | [77706](https://github.com/airbytehq/airbyte/pull/77706) | Prevent table filenode query from running outside max db connections control.                                                                                              |
+| 3.8.0-rc.9  | 2026-05-06 | [77805](https://github.com/airbytehq/airbyte/pull/77805) | Make the hidden additional properties fields in spec optional. No functional change.                                                                                       |
 | 3.8.0-rc.8  | 2026-04-24 | [76991](https://github.com/airbytehq/airbyte/pull/76991) | Empty schema list causes all schemas to be discovered                                                                                                                      |
 | 3.8.0-rc.7  | 2026-04-21 | [76474](https://github.com/airbytehq/airbyte/pull/76474) | Improve SSL enforcement error message on Airbyte Cloud when using insufficient SSL modes without an SSH tunnel                                                             |
 | 3.8.0-rc.6  | 2026-04-16 | [76399](https://github.com/airbytehq/airbyte/pull/76399) | Catalog validation failures result in stream failure                                                                                                                       |
