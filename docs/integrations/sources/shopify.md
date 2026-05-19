@@ -53,7 +53,7 @@ For existing **Airbyte Cloud** customers, if you are currently using the **API P
 6. (Optional) To re-fetch recently updated records during incremental syncs, set **Lookback Window (in Days)**. This can help capture late-arriving updates, but it can also emit records that were already synced. Defaults to `0`.
 </FieldAnchor>
 
-7. Click **Set up source** and wait for the connection test to complete.
+1. Click **Set up source** and wait for the connection test to complete.
 <!-- /env:cloud -->
 
 <!-- env:oss -->
