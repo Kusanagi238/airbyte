@@ -44,12 +44,15 @@ For existing **Airbyte Cloud** customers, if you are currently using the **API P
 <FieldAnchor field="shop">
 4. The **Shopify Store** field will be automatically filled after you authenticate your Shopify account based on the store you selected. Once populated, confirm the value is accurate.
 </FieldAnchor>
+
 <FieldAnchor field="start_date">
 5. (Optional) You may set a **Replication Start Date** as the starting point for your data replication. Any data created before this date will not be synced. Defaults to January 1st, 2020.
 </FieldAnchor>
+
 <FieldAnchor field="lookback_window_in_days">
 6. (Optional) To re-fetch recently updated records during incremental syncs, set **Lookback Window (in Days)**. This can help capture late-arriving updates, but it can also emit records that were already synced. Defaults to `0`.
 </FieldAnchor>
+
 7. Click **Set up source** and wait for the connection test to complete.
 <!-- /env:cloud -->
 
@@ -282,7 +285,6 @@ Use this setting if Shopify updates or materializes records after the previous s
 - Check out common troubleshooting issues for the Shopify source connector on our Airbyte Forum [here](https://github.com/airbytehq/airbyte/discussions).
 
 </details>
-
 
 ## Changelog
 
