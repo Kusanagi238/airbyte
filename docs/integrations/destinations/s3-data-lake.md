@@ -342,6 +342,16 @@ Iceberg supports [Git-like semantics](https://iceberg.apache.org/docs/latest/bra
 At the end of stream sync, we replace the current `main` branch with the `airbyte_staging` branch we were working on. We intentionally avoid fast-forwarding to better handle potential compaction issues.
 **Important Warning**: Any changes made to the `main` branch outside of Airbyte's operations after a sync begins will be lost during this process.
 
+## Performance tuning
+
+### Flush batch size
+
+The destination buffers records in memory and flushes them to Iceberg in batches. By default, each batch is approximately 200 MB. To override the batch size, set the optional `flush_batch_size_mb` field in your connector configuration to a value between 1 and 500.
+
+This field isn't exposed in the Airbyte UI. To set it, configure the connector through the Airbyte API, the Terraform provider, or PyAirbyte.
+
+Smaller batch sizes flush more frequently, which improves data freshness and reduces the volume of buffered data lost if a sync fails. The trade-off is that the connector writes more, smaller files to S3, which increases the work required during [compaction](#compaction). Larger batch sizes use more memory but produce fewer output files.
+
 ## Compaction
 
 :::caution
@@ -388,6 +398,33 @@ Now, you can identify the latest version of the 'Alice' record by querying wheth
 
 This destination supports [namespaces](https://docs.airbyte.com/platform/using-airbyte/core-concepts/namespaces).
 
+## Reference
+
+The connector uses these configuration fields for programmatic setup with PyAirbyte, Terraform, or the Airbyte API:
+
+| Field | Required | Description |
+| :--- | :---: | :--- |
+| `access_key_id` | Required for REST, Nessie, Polaris, and most Glue configurations | AWS access key ID used to write S3 data and, for Glue, access the Glue catalog. You can omit this for Glue if you're using an Airbyte Cloud IAM role or a self-managed AWS default credentials provider. |
+| `secret_access_key` | Required for REST, Nessie, Polaris, and most Glue configurations | AWS secret access key paired with `access_key_id`. You can omit this for Glue if you're using an Airbyte Cloud IAM role or a self-managed AWS default credentials provider. |
+| `s3_bucket_name` | Yes | Name of the S3 or S3-compatible bucket that stores Iceberg data. |
+| `s3_bucket_region` | Yes | AWS region for the bucket, for example `us-east-1`. For S3-compatible storage, use the region expected by your backend or leave it blank if your backend doesn't use regions. |
+| `s3_endpoint` | No | Custom S3 endpoint URL for S3-compatible storage. |
+| `warehouse_location` | Yes | Root Iceberg warehouse location. For AWS Glue, Nessie, and REST catalogs that use S3 storage, use an S3 URI such as `s3://your-bucket/path/to/store/files/in`. |
+| `main_branch_name` | Yes | Primary branch name in the catalog. Most query engines use `main`. |
+| `catalog_type.catalog_type` | Yes | Iceberg catalog type. Valid values are `GLUE`, `NESSIE`, `REST`, and `POLARIS`. |
+| `catalog_type.glue_id` | Required for Glue | AWS account ID for the Glue catalog. |
+| `catalog_type.role_arn` | No | AWS role ARN to assume. This is only available in Airbyte Cloud with the Glue catalog. |
+| `catalog_type.database_name` | Required for Glue | Default Glue database. Airbyte uses this only when the connection's **Destination Namespace** is set to **Destination-defined** or **Source-defined**. |
+| `catalog_type.server_uri` | Required for Nessie, REST, and Polaris | Base URL for the Nessie, REST, or Polaris catalog server. |
+| `catalog_type.access_token` | No | Bearer token for Nessie authentication. |
+| `catalog_type.namespace` | Required for Nessie, REST, and Polaris | Default namespace. Airbyte uses this only when the connection's **Destination Namespace** is set to **Destination-defined** or **Source-defined**. |
+| `catalog_type.catalog_name` | Required for Polaris | Polaris catalog name. |
+| `catalog_type.client_id` | Required for Polaris | OAuth client ID for the Polaris principal. |
+| `catalog_type.client_secret` | Required for Polaris | OAuth client secret for the Polaris principal. |
+| `catalog_type.scope` | Required for Polaris | OAuth scope in the format `PRINCIPAL_ROLE:<role_name>`. |
+| `catalog_type.oauth2_server_uri` | No | Polaris OAuth2 token endpoint URI. |
+| `flush_batch_size_mb` | No | Approximate size in megabytes of each batch written to Iceberg. Defaults to `200`. Valid values are `1` through `500`. This field is hidden in the Airbyte UI. |
+
 ## Changelog
 
 <details>
@@ -395,8 +432,8 @@ This destination supports [namespaces](https://docs.airbyte.com/platform/using-a
 
 | Version     | Date       | Pull Request                                               | Subject                                                                                                                         |
 |:------------|:-----------|:-----------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------|
-| 0.3.49      | 2026-05-19 | [78232](https://github.com/airbytehq/airbyte/pull/78232)  | Upgrade CDK to 1.0.13 |
-| 0.3.48      | 2026-05-01 | [77677](https://github.com/airbytehq/airbyte/pull/77677)  | Add configurable flush batch size for aggregate publishing.                                                                     |
+| 0.3.49      | 2026-05-20 | [78232](https://github.com/airbytehq/airbyte/pull/78232)  | Upgrade CDK to 1.0.13.                                                                                                         |
+| 0.3.48      | 2026-05-04 | [77677](https://github.com/airbytehq/airbyte/pull/77677)  | Add optional `flush_batch_size_mb` configuration field to tune the size of write batches.                                       |
 | 0.3.47      | 2026-04-16 | [76410](https://github.com/airbytehq/airbyte/pull/76410) | Upgrade CDK to 1.0.9.                                                  |
 | 0.3.46      | 2026-03-30 |                                                           | Upgrade CDK to 1.0.7: fix sort order handling during schema evolution. |
 | 0.3.45      | 2026-03-12 | [74326](https://github.com/airbytehq/airbyte/pull/74326) | Upgrade CDK to 1.0.5: Number-type primary keys are now stored as String (enabling dedup on numeric PKs); fix schema evolution when replacing identifier columns |
