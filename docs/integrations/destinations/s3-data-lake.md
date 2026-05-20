@@ -413,17 +413,17 @@ The connector uses these configuration fields for programmatic setup with PyAirb
 | `main_branch_name` | Yes | Primary branch name in the catalog. Most query engines use `main`. |
 | `catalog_type.catalog_type` | Yes | Iceberg catalog type. Valid values are `GLUE`, `NESSIE`, `REST`, and `POLARIS`. |
 | `catalog_type.glue_id` | Required for Glue | AWS account ID for the Glue catalog. |
-| `catalog_type.role_arn` | No | AWS role ARN to assume. This is only available in Airbyte Cloud with the Glue catalog. |
-| `catalog_type.database_name` | Required for Glue | Default Glue database. Airbyte uses this only when the connection's **Destination Namespace** is set to **Destination-defined** or **Source-defined**. |
+| `catalog_type.role_arn` | No | AWS role Amazon Resource Name (ARN) to assume. This is only available in Airbyte Cloud with the Glue catalog. |
+| `catalog_type.database_name` | Required for Glue | Default Glue database. Airbyte uses this only when you configure the connection's **Destination Namespace** as **Destination-defined** or **Source-defined**. |
 | `catalog_type.server_uri` | Required for Nessie, REST, and Polaris | Base URL for the Nessie, REST, or Polaris catalog server. |
 | `catalog_type.access_token` | No | Bearer token for Nessie authentication. |
-| `catalog_type.namespace` | Required for Nessie, REST, and Polaris | Default namespace. Airbyte uses this only when the connection's **Destination Namespace** is set to **Destination-defined** or **Source-defined**. |
+| `catalog_type.namespace` | Required for Nessie, REST, and Polaris | Default namespace. Airbyte uses this only when you configure the connection's **Destination Namespace** as **Destination-defined** or **Source-defined**. |
 | `catalog_type.catalog_name` | Required for Polaris | Polaris catalog name. |
 | `catalog_type.client_id` | Required for Polaris | OAuth client ID for the Polaris principal. |
 | `catalog_type.client_secret` | Required for Polaris | OAuth client secret for the Polaris principal. |
 | `catalog_type.scope` | Required for Polaris | OAuth scope in the format `PRINCIPAL_ROLE:<role_name>`. |
-| `catalog_type.oauth2_server_uri` | No | Polaris OAuth2 token endpoint URI. |
-| `flush_batch_size_mb` | No | Approximate size in megabytes of each batch written to Iceberg. Defaults to `200`. Valid values are `1` through `500`. This field is hidden in the Airbyte UI. |
+| `catalog_type.oauth2_server_uri` | No | Polaris OAuth 2.0 token endpoint URI. |
+| `flush_batch_size_mb` | No | Approximate size in megabytes of each batch written to Iceberg. Defaults to `200`. Valid values are `1` through `500`. The Airbyte UI hides this field. |
 
 ## Changelog
 
