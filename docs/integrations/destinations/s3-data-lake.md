@@ -413,7 +413,7 @@ The connector uses these configuration fields for programmatic setup with PyAirb
 | `main_branch_name` | Yes | Primary branch name in the catalog. Most query engines use `main`. |
 | `catalog_type.catalog_type` | Yes | Iceberg catalog type. Valid values are `GLUE`, `NESSIE`, `REST`, and `POLARIS`. |
 | `catalog_type.glue_id` | Required for Glue | AWS account ID for the Glue catalog. |
-| `catalog_type.role_arn` | No | AWS role Amazon Resource Name (ARN) to assume. This is only available in Airbyte Cloud with the Glue catalog. |
+| `catalog_type.role_arn` | No | AWS role Amazon Resource Name to assume. This is only available in Airbyte Cloud with the Glue catalog. |
 | `catalog_type.database_name` | Required for Glue | Default Glue database. Airbyte uses this only when you configure the connection's **Destination Namespace** as **Destination-defined** or **Source-defined**. |
 | `catalog_type.server_uri` | Required for Nessie, REST, and Polaris | Base URL for the Nessie, REST, or Polaris catalog server. |
 | `catalog_type.access_token` | No | Bearer token for Nessie authentication. |
@@ -432,7 +432,7 @@ The connector uses these configuration fields for programmatic setup with PyAirb
 
 | Version       | Date         | Pull Request                                                 | Subject                                                                                                                                                         |
 | :------------ | :----------- | :----------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.3.49        | 2026-05-20   | [78232](https://github.com/airbytehq/airbyte/pull/78232)     | Upgrade CDK to 1.0.13.                                                                                                                                          |
+| 0.3.49        | 2026-05-20   | [78232](https://github.com/airbytehq/airbyte/pull/78232)     | Upgrade Connector Development Kit to 1.0.13.                                                                                                                    |
 | 0.3.48        | 2026-05-04   | [77677](https://github.com/airbytehq/airbyte/pull/77677)     | Add optional `flush_batch_size_mb` configuration field to tune the size of write batches.                                                                       |
 | 0.3.47        | 2026-04-16   | [76410](https://github.com/airbytehq/airbyte/pull/76410)     | Upgrade CDK to 1.0.9.                                                                                                                                           |
 | 0.3.46        | 2026-03-30   |                                                              | Upgrade CDK to 1.0.7: fix sort order handling during schema evolution.                                                                                          |
