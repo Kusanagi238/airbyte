@@ -135,21 +135,25 @@ The granularity for the cursor is 1 day, so Incremental Sync in Append mode may 
 
 ## Supported Streams
 
-- [Sites](https://developers.google.com/webmaster-tools/search-console-api-original/v3/sites/get)
-- [Sitemaps](https://developers.google.com/webmaster-tools/search-console-api-original/v3/sitemaps/list)
-- [Full Analytics report](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query) — this stream has a long sync time because it is very detailed; use with care
-- [Analytics report by country](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics report by date](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics report by device](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics report by page](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics report by query](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics keyword report](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics keyword report by page](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics keyword report by site](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics page report](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics site report by page](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- [Analytics site report by site](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query)
-- Analytics report by custom dimensions
+Stream identifiers (in code) match what you see in the connection's stream list and in migration guides.
+
+- `sites` — [Sites](https://developers.google.com/webmaster-tools/search-console-api-original/v3/sites/get)
+- `sitemaps` — [Sitemaps](https://developers.google.com/webmaster-tools/search-console-api-original/v3/sitemaps/list)
+- `search_analytics_all_fields` — [full Search Analytics report](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query) grouped by `date`, `country`, `device`, `page`, and `query`. This stream has a long sync time because it is very detailed; use with care.
+- `search_analytics_by_country` — Search Analytics report grouped by `country`.
+- `search_analytics_by_date` — Search Analytics report grouped by `date`.
+- `search_analytics_by_device` — Search Analytics report grouped by `device`.
+- `search_analytics_by_page` — Search Analytics report grouped by `page`.
+- `search_analytics_by_query` — Search Analytics report grouped by `query`.
+- `search_analytics_page_report` — Search Analytics report grouped by `date`, `country`, `device`, and `page`.
+- `search_analytics_site_report_by_page` — Search Analytics report grouped by `date`, `country`, and `device`, aggregated `byPage`.
+- `search_analytics_site_report_by_site` — Search Analytics report grouped by `date`, `country`, and `device`, aggregated `byProperty`.
+- `search_analytics_keyword_page_report` — Search Analytics report grouped by `date`, `country`, `device`, `query`, and `page`, with one row per `searchAppearance` value.
+- `search_analytics_keyword_site_report_by_page` — Search Analytics report grouped by `date`, `country`, `device`, and `query`, aggregated `byPage`, with one row per `searchAppearance` value.
+- `search_analytics_keyword_site_report_by_site` — Search Analytics report grouped by `date`, `country`, and `device`, aggregated `byProperty`, with one row per `searchAppearance` value.
+- Custom Search Analytics reports defined under [Custom reports](#custom-reports), each exposed as a separate stream named after the report.
+
+All Search Analytics streams query the [`searchAnalytics.query`](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query) endpoint. Streams whose names contain `keyword` include a `search_appearance` dimension (for example, `AMP_BLUE_LINK` or `RICH_RESULT`) so traffic from different rich-result types is preserved as distinct rows.
 
 ### Entity-Relationship Diagram (ERD)
 <EntityRelationshipDiagram></EntityRelationshipDiagram>
@@ -227,6 +231,8 @@ To check your actual quota limits:
 
 If you need higher limits, you can enable billing on your Google Cloud project or submit a quota increase request through the Google Cloud Console. You can then configure the **API Requests Per Minute** setting in the connector to match your actual quota.
 
+Search Analytics streams request up to 5,000 rows per API page. Large properties can still require many API requests, especially for streams grouped or filtered by page or query. If Google returns quota errors, lower **Number of Concurrent Threads** or **Search Analytics API Requests Per Minute**.
+
 #### Data retention
 
 Google Search Console only retains data for websites from the last 16 months. Any data prior to this cutoff point will not be accessible. For more information, see [Google's documentation on data freshness and availability](https://support.google.com/webmasters/answer/7576553).
@@ -244,12 +250,12 @@ Google Search Console only retains data for websites from the last 16 months. An
 
 | Version     | Date       | Pull Request                                             | Subject                                                                                                                                                                |
 |:------------|:-----------|:---------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 2.0.2 | 2026-05-20 | [78289](https://github.com/airbytehq/airbyte/pull/78289) | Reduce `search_analytics_*` paginator `page_size` from `25000` to `5000` to lower peak worker memory on high-volume tenants. See airbytehq/oncall#12246 for context. |
+| 2.0.2 | 2026-05-21 | [78289](https://github.com/airbytehq/airbyte/pull/78289) | Reduce `search_analytics_*` paginator `page_size` from `25000` to `5000` to lower peak worker memory on high-volume properties. |
 | 2.0.1 | 2026-05-18 | [78157](https://github.com/airbytehq/airbyte/pull/78157) | Restore `default_concurrency` to `num_workers`-driven configuration (`{{ config.get('num_workers', 3) }}`) and keep `max_concurrency` at `100`; cancels the Phase 1 concurrency tuning rollout introduced in 2.0.1-rc.1 |
-| 2.0.0 | 2026-04-20 | [76306](https://github.com/airbytehq/airbyte/pull/76306) | Append `search_appearance` to existing primary keys of keyword report streams; drop duplicate unfiltered keyword rows caused by empty/null `searchAppearance` partitions; fix multi-site duplication by removing the cartesian-product over `site_urls` on keyword streams; wrap `dimensionFilterGroups.filters` in an array to match the Google Search Console API spec. This is a **breaking change** for the `search_analytics_keyword_page_report`, `search_analytics_keyword_site_report_by_page`, and `search_analytics_keyword_site_report_by_site` streams. See the [migration guide](https://docs.airbyte.com/integrations/sources/google-search-console-migrations) for details. |
+| 2.0.0 | 2026-05-04 | [76306](https://github.com/airbytehq/airbyte/pull/76306) | Append `search_appearance` to existing primary keys of keyword report streams; drop duplicate unfiltered keyword rows caused by empty/null `searchAppearance` partitions; fix multi-site duplication by removing the cartesian-product over `site_urls` on keyword streams; wrap `dimensionFilterGroups.filters` in an array to match the Google Search Console API spec. This is a **breaking change** for the `search_analytics_keyword_page_report`, `search_analytics_keyword_site_report_by_page`, and `search_analytics_keyword_site_report_by_site` streams. See the [migration guide](https://docs.airbyte.com/integrations/sources/google-search-console-migrations) for details. |
 | 1.10.33 | 2026-04-28 | [77276](https://github.com/airbytehq/airbyte/pull/77276) | Update dependencies |
 | 1.10.32 | 2026-04-21 | [76624](https://github.com/airbytehq/airbyte/pull/76624) | Update dependencies |
-| 1.10.31 | 2026-04-09 | [76190](https://github.com/airbytehq/airbyte/pull/76190) | Add access_token to extract_output and complete_oauth_output_specification to fix OAuth secretId 422 regression |
+| 1.10.31 | 2026-04-14 | [76190](https://github.com/airbytehq/airbyte/pull/76190) | Add access_token to extract_output and complete_oauth_output_specification to fix OAuth secretId 422 regression |
 | 1.10.30 | 2026-04-13 | [76276](https://github.com/airbytehq/airbyte/pull/76276) | Rename "concurrent workers" to "concurrent threads" in connector spec |
 | 1.10.29 | 2026-04-01 | [75582](https://github.com/airbytehq/airbyte/pull/75582) | Add `oauth_connector_input_specification` with granular scopes |
 | 1.10.28 | 2026-03-31 | [75699](https://github.com/airbytehq/airbyte/pull/75699) | Update dependencies |
