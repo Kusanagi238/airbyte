@@ -156,6 +156,7 @@ Stream identifiers (in code) match what you see in the connection's stream list 
 All Search Analytics streams query the [`searchAnalytics.query`](https://developers.google.com/webmaster-tools/search-console-api-original/v3/searchanalytics/query) endpoint. Streams whose names contain `keyword` include a `search_appearance` dimension (for example, `AMP_BLUE_LINK` or `RICH_RESULT`) so traffic from different rich-result types is preserved as distinct rows.
 
 ### Entity-Relationship Diagram (ERD)
+
 <EntityRelationshipDiagram></EntityRelationshipDiagram>
 
 ## Connector-specific configurations
