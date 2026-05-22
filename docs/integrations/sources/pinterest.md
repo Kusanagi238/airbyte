@@ -201,6 +201,24 @@ properties:
 For more detailed information and guidelines on creating custom reports, please refer to the
 [Pinterest API documentation](https://developers.pinterest.com/docs/api/v5/#operation/analytics/create_report).
 
+## Reference
+
+This connector uses the [Pinterest API v5](https://developers.pinterest.com/docs/api/v5/). All
+API requests use the `https://api.pinterest.com/v5/` endpoint.
+
+For programmatic configuration, use these parameter names:
+
+| Field | Required | Description |
+| ----- | :------: | ----------- |
+| `credentials.client_id` | Yes | Pinterest App ID used for OAuth 2.0 authentication. |
+| `credentials.client_secret` | Yes | Pinterest app secret key used for OAuth 2.0 authentication. |
+| `credentials.refresh_token` | Yes | Refresh token returned by the Pinterest OAuth flow. |
+| `start_date` | No | Date in `YYYY-MM-DD` format. Records before this date aren't replicated. If unset, the connector uses the maximum lookback period allowed by each stream. |
+| `status` | No | List of statuses used to filter the `ads`, `ad_groups`, and `campaigns` streams. Valid values are `ACTIVE`, `PAUSED`, and `ARCHIVED`. If unset, the connector syncs `ACTIVE` and `PAUSED` records. |
+| `custom_reports` | No | List of custom Pinterest ads report definitions. Each report requires `name`, `level`, `granularity`, and `columns`. |
+| `account_id` | No | Pinterest ad account ID to sync. If unset, the connector syncs data for all ad accounts available to the authenticated Pinterest user. |
+| `num_threads` | No | Number of concurrent threads to use during a sync. Valid values are `1` through `40`. Defaults to `2` in the source configuration. If the source configuration omits this field, the connector runs with five concurrent requests. |
+
 ## Performance considerations
 
 The connector is restricted by the Pinterest
@@ -208,6 +226,10 @@ The connector is restricted by the Pinterest
 enforces rate limits per endpoint category. For example, analytics endpoints allow 300 requests per
 minute with standard access, while general read endpoints allow 1,000 requests per minute. For
 details, see the [Pinterest rate limits documentation](https://developers.pinterest.com/docs/reference/rate-limits/).
+
+If the source configuration doesn't include **Number of concurrent threads**, the connector uses
+five concurrent requests during syncs. If Pinterest returns rate limit errors for your account,
+lower **Number of concurrent threads** in the source configuration.
 
 ## Changelog
 
