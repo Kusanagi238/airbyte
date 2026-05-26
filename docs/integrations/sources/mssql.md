@@ -60,6 +60,18 @@ On Airbyte Cloud, only secured connections to your MSSQL instance are supported 
 configuration. You may either configure your connection using one of the supported SSL Methods or by
 using an SSH Tunnel.
 
+### Azure SQL read-only replicas
+
+[Azure SQL Database and Azure SQL Managed Instance](https://learn.microsoft.com/en-us/azure/azure-sql/database/read-scale-out)
+can route read-only workloads to a read-only replica when the JDBC connection uses
+`ApplicationIntent=ReadOnly`. To use this with Airbyte, add `applicationIntent=ReadOnly` to
+**JDBC URL Params**.
+
+Read-only replicas can lag behind the primary. Microsoft notes that typical data propagation latency
+is small, but there is no fixed upper bound. If Azure SQL terminates a query on a read-only replica
+with error code 3947, Airbyte retries the sync because this usually indicates temporary redo lag on
+the replica.
+
 ## Authentication with Microsoft Entra ID
 
 This connector supports [Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity/) (formerly Azure Active Directory) authentication using a service principal, as an alternative to SQL Server username and password authentication. This is the recommended authentication mode for Azure SQL Database and Azure SQL Managed Instance.
@@ -411,6 +423,38 @@ test!
 If you do not see a type in this list, assume that it is coerced into a string. We are happy to take
 feedback on preferred mappings.
 
+## Reference
+
+For programmatic configuration, use these parameter names:
+
+| Field | Required | Description |
+| :---- | :------: | :---------- |
+| `host` | Yes | Hostname of the SQL Server database. |
+| `port` | No | Port of the database. Defaults to `1433`. |
+| `database` | Yes | Name of the database to replicate. |
+| `schemas` | No | List of schemas to sync from. If omitted or empty, the connector discovers all non-system schemas. |
+| `username` | Required unless using Microsoft Entra ID | SQL Server username. Ignored when both `client_id` and `client_secret` are set. |
+| `password` | Required unless using Microsoft Entra ID | Password for the SQL Server user. Ignored when both `client_id` and `client_secret` are set. |
+| `jdbc_url_params` | No | Additional JDBC connection properties as `key=value` pairs separated by `&`, such as `applicationIntent=ReadOnly`. |
+| `client_id` | Required for Microsoft Entra ID authentication | Application (client) ID of the Microsoft Entra ID service principal. |
+| `client_secret` | Required for Microsoft Entra ID authentication | Client secret for the Microsoft Entra ID service principal. |
+| `tenant_id` | No | Optional Microsoft Entra tenant ID. |
+| `ssl_mode` | No | Encryption mode. Use `{"mode": "unencrypted"}`, `{"mode": "encrypted_trust_server_certificate"}`, or `{"mode": "encrypted_verify_certificate", "hostNameInCertificate": "<hostname>", "certificate": "<certificate>"}`. Airbyte Cloud requires encryption or an SSH tunnel for new configurations. |
+| `tunnel_method` | No | SSH tunnel configuration. Use `{"tunnel_method": "NO_TUNNEL"}` for a direct connection. |
+| `replication_method` | No | Replication method. Use `{"method": "STANDARD"}` for cursor-based incremental sync or `{"method": "CDC"}` for Change Data Capture. Defaults to `STANDARD`. |
+| `checkpoint_target_interval_seconds` | No | Target interval between checkpoints, in seconds. Defaults to `300`. |
+| `concurrency` | No | Maximum number of concurrent queries to the database. |
+| `check_privileges` | No | Whether discovery checks table and column access privileges and filters inaccessible objects. Defaults to `true`. |
+
+For CDC, `replication_method` also supports these parameters:
+
+| Field | Required | Description |
+| :---- | :------: | :---------- |
+| `initial_waiting_seconds` | No | Seconds to wait when the connector starts to determine whether there is new data. Defaults to `300`. |
+| `invalid_cdc_cursor_position_behavior` | No | How to handle stale or invalid CDC cursor positions. Use `Fail sync` or `Re-sync data`. Defaults to `Fail sync`. |
+| `initial_load_timeout_hours` | No | Maximum number of hours for the initial load before catching up on CDC logs. Defaults to `8`. |
+| `poll_interval_ms` | No | How often Debezium polls for new data, in milliseconds. Defaults to `500` and must be less than `15000`. |
+
 ## Upgrading to version 4.3.0 and above
 
 Version 4.3.0 introduces a migration from the legacy CDK to the new CDK architecture. This migration includes:
@@ -469,7 +513,7 @@ WHERE actor_definition_id ='b5ea17b1-f170-46dc-bc31-cc744ca984c1' AND (configura
 
 | Version     | Date       | Pull Request                                                                                                      | Subject                                                                                                                                                                               |
 |:------------|:-----------|:------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 4.4.8       | 2026-05-25 | [78415](https://github.com/airbytehq/airbyte/pull/78415)                                                          | Classify Azure read-replica error 3947 as transient so affected syncs retry instead of failing..                                                                                      |
+| 4.4.8       | 2026-05-26 | [78415](https://github.com/airbytehq/airbyte/pull/78415)                                                          | Classify Azure read-replica error 3947 as transient so affected syncs retry instead of failing.                                                                                       |
 | 4.4.7       | 2026-05-12 | [78033](https://github.com/airbytehq/airbyte/pull/78033)                                                          | Re-release the Java connector base image revert after the 4.4.6 publish failure.                                                                                                      |
 | 4.4.6       | 2026-05-07 | [77856](https://github.com/airbytehq/airbyte/pull/77856)                                                          | Revert the Java connector base image to resolve connection issues and remove registry rollback overrides.                                                                             |
 | 4.4.5       | 2026-05-07 | [77843](https://github.com/airbytehq/airbyte/pull/77843)                                                          | Roll back source mssql to 4.4.3 to investigate a potential connection issue.                                                                                                          |
