@@ -27,17 +27,16 @@ We have provided a quick setup guide for creating an integration in Notion below
 ### Step 1: Create an integration in Notion and set capabilities
 
 1. Log in to your Notion workspace and navigate to the [My integrations](https://www.notion.so/my-integrations) page. Select **New integration**.
-
-:::note
-You must be the owner of the Notion workspace to create a new integration associated with it.
-:::
-
 2. Enter a **Name** for your integration. Make sure you have selected the correct workspace from the **Associated workspace** dropdown menu, and click **Submit**.
 3. In the navbar, select [**Capabilities**](https://developers.notion.com/reference/capabilities). Check the following capabilities based on your use case:
 
 - [**Read content**](https://developers.notion.com/reference/capabilities#content-capabilities): required for all connections.
 - [**Read comments**](https://developers.notion.com/reference/capabilities#comment-capabilities): required if you want to sync the Comments stream.
 - [**Read user information**](https://developers.notion.com/reference/capabilities#user-capabilities) (with or without emails): required if you want to sync the Users stream.
+
+:::note
+You must be the owner of the Notion workspace to create a new integration associated with it.
+:::
 
 ### Step 2: Share pages and acquire authorization credentials
 
@@ -66,7 +65,9 @@ If you are authenticating via OAuth2.0 for **Airbyte Open Source**, you will nee
 2. In the left navigation bar, click **Sources**. In the top-right corner, click **New source**.
 3. Find and select **Notion** from the list of available sources.
 4. Enter a **Source name** of your choosing.
-5. Choose the method of authentication from the dropdown menu:
+5. Choose the method of authentication from the dropdown menu.
+6. (Optional) Provide a **Start Date** using the date picker, or enter a UTC date and time programmatically in the format `YYYY-MM-DDTHH:MM:SS.000Z`. During incremental syncs, records generated before this date aren't replicated. If left blank, the start date defaults to two years before the current date.
+7. Click **Set up source** and wait for the tests to complete.
 
 <!-- env:cloud -->
 
@@ -83,9 +84,6 @@ If you are authenticating via OAuth2.0 for **Airbyte Open Source**, you will nee
 - **Access Token**: Copy and paste the Access Token found in the **Secrets** tab of your private integration's page.
 - **OAuth2.0**: Copy and paste the Client ID, Client Secret and Access Token you acquired after setting up your public integration.
 <!-- /env:oss -->
-
-6. (Optional) You may optionally provide a **Start Date** using the provided datepicker, or by programmatically entering a UTC date and time in the format: `YYYY-MM-DDTHH:mm:ss.SSSZ`. During incremental syncs, only data generated after this date is replicated. If left blank, the start date defaults to two years before the current date.
-7. Click **Set up source** and wait for the tests to complete.
 
 ## Supported sync modes
 
@@ -115,6 +113,22 @@ The Notion API enforces a rate limit of approximately three requests per second 
 
 The Blocks stream recursively fetches child blocks up to 30 levels deep. Pages with deeply nested content can generate a large number of API requests, which may slow down syncs for workspaces with complex page structures.
 
+## Reference
+
+This connector uses the [Notion API](https://developers.notion.com/reference/intro) with the `2025-09-03` API version. The connector calls the Search, Users, Comments, and Blocks endpoints to retrieve shared pages, data sources, workspace users, comments, and child blocks.
+
+For programmatic configuration, use these parameter names:
+
+| Field | Required | Description |
+| ----- | :------: | ----------- |
+| `credentials.auth_type` | Yes | Authentication method. Valid values are `OAuth2.0` and `token`. |
+| `credentials.token` | Required for access token authentication | Access token for your private Notion integration. |
+| `credentials.client_id` | Required for OAuth 2.0 authentication | Client ID of your public Notion integration. |
+| `credentials.client_secret` | Required for OAuth 2.0 authentication | Client secret of your public Notion integration. |
+| `credentials.access_token` | Required for OAuth 2.0 authentication | Access token returned by the Notion OAuth flow. |
+| `start_date` | No | UTC date and time in `YYYY-MM-DDTHH:MM:SS.000Z` format. Records before this date aren't replicated for streams that support incremental sync. If unset, defaults to two years before the first sync. |
+| `num_workers` | No | Number of concurrent worker threads to use during a sync. Valid values are `1` through `10`. Defaults to `4`. Higher values can speed up large syncs, but may increase rate-limit pressure against Notion's limit of approximately three requests per second per integration. |
+
 ## Changelog
 
 <details>
@@ -123,7 +137,7 @@ The Blocks stream recursively fetches child blocks up to 30 levels deep. Pages w
 | Version     | Date       | Pull Request                                             | Subject                                                                                                                                                                |
 |:------------|:-----------|:---------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 4.0.8-rc.4 | 2026-05-26 | [78433](https://github.com/airbytehq/airbyte/pull/78433) | Reduce default concurrency to 4 while preserving configurable worker count and Notion API budget |
-| 4.0.8-rc.3 | 2026-05-21 | [78343](https://github.com/airbytehq/airbyte/pull/78343) | Revert default concurrency to 5, add configurable worker count, and enforce Notion API budget |
+| 4.0.8-rc.3 | 2026-05-22 | [78343](https://github.com/airbytehq/airbyte/pull/78343) | Revert default concurrency to 5, add configurable worker count, and enforce Notion API budget |
 | 4.0.8-rc.2 | 2026-05-19 | [78274](https://github.com/airbytehq/airbyte/pull/78274) | Increase `default_concurrency` to 6 for concurrency tuning iteration 2 |
 | 4.0.8-rc.1 | 2026-05-18 | [78149](https://github.com/airbytehq/airbyte/pull/78149) | Start concurrency tuning rollout |
 | 4.0.7 | 2026-04-28 | [77340](https://github.com/airbytehq/airbyte/pull/77340) | Update dependencies |
@@ -136,7 +150,7 @@ The Blocks stream recursively fetches child blocks up to 30 levels deep. Pages w
 | 4.0.0 | 2026-02-25 | [74017](https://github.com/airbytehq/airbyte/pull/74017) | Migrate to Notion API version 2025-09-03: replace `databases` stream with `data_sources`, update page parent references, and add new schema fields |
 | 3.3.14 | 2026-02-24 | [73856](https://github.com/airbytehq/airbyte/pull/73856) | Update dependencies |
 | 3.3.13 | 2026-02-10 | [73032](https://github.com/airbytehq/airbyte/pull/73032) | Update dependencies |
-| 3.3.12 | 2026-02-06 | [72925](https://github.com/airbytehq/airbyte/pull/72925) | Add client-side incremental filtering to blocks stream RecordFilter |
+| 3.3.12 | 2026-02-09 | [72925](https://github.com/airbytehq/airbyte/pull/72925) | Add client-side incremental filtering to blocks stream RecordFilter |
 | 3.3.11 | 2026-01-20 | [71943](https://github.com/airbytehq/airbyte/pull/71943) | Update dependencies |
 | 3.3.10 | 2026-01-14 | [71602](https://github.com/airbytehq/airbyte/pull/71602) | Update dependencies |
 | 3.3.9 | 2025-12-18 | [70534](https://github.com/airbytehq/airbyte/pull/70534) | Update dependencies |
