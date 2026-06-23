@@ -101,8 +101,16 @@ class SnowflakeCortexIndexingModel(BaseModel):
         discriminator="auth_type",
         type="object",
         oneOf=[
-            {"title": "Username and Password", "required": ["password"], "properties": {"auth_type": {"type": "string", "const": "password"}}},
-            {"title": "Key Pair Authentication", "required": ["private_key"], "properties": {"auth_type": {"type": "string", "const": "key_pair"}}},
+            {
+                "title": "Username and Password",
+                "required": ["password"],
+                "properties": {"auth_type": {"type": "string", "const": "password"}},
+            },
+            {
+                "title": "Key Pair Authentication",
+                "required": ["private_key"],
+                "properties": {"auth_type": {"type": "string", "const": "key_pair"}},
+            },
         ],
     )
 
